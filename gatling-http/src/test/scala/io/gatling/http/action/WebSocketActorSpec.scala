@@ -55,7 +55,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 
 	"A WebSocketActor" should {
 		"record a successful open and advance" in new scope {
-			open(webSocketClient(_.onOpen(mockAs[WebSocket]("ws").smart)))
+			open(webSocketClient(_.onOpen(mock[WebSocket].smart)))
 
 			there was one(requestLogger).logRequest(any[Session], anyString, isEq(OK), anyLong, anyLong, isEq(null))
 			next.underlyingActor.session.map(_.contains("testAttributeName")) mustEqual Some(true)
@@ -63,7 +63,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a failed open and advance" in new scope {
-			open(mockAs[WebSocketClient]("wsc").open(any[URI], any[WebSocketListener]) throws new IOException("testErrorMessage"))
+			open(mock[WebSocketClient].open(any[URI], any[WebSocketListener]) throws new IOException("testErrorMessage"))
 
 			there was one(requestLogger).logRequest(any[Session], anyString, isEq(KO), anyLong, anyLong, anArgThat(contains("testErrorMessage")))
 			next.underlyingActor.session.map(_.contains("testAttributeName")) mustEqual Some(false)
@@ -79,7 +79,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a close-before-open as failed and advance" in new scope {
-			open(webSocketClient(_.onClose(mockAs[WebSocket]("ws").smart)))
+			open(webSocketClient(_.onClose(mock[WebSocket].smart)))
 
 			there was one(requestLogger).logRequest(any[Session], anyString, isEq(KO), anyLong, anyLong, any[Option[String]])
 			next.underlyingActor.session.map(_.contains("testAttributeName")) mustEqual Some(false)
@@ -87,7 +87,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a successful send and advance" in new scope {
-			val webSocket = mockAs[WebSocket]("ws").smart
+			val webSocket = mock[WebSocket].smart
 			openSuccessfully(webSocket)
 			sendMessage("testMessage")
 
@@ -97,7 +97,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a send after an error as failed and advance" in new scope {
-			val webSocket = mockAs[WebSocket]("ws").smart
+			val webSocket = mock[WebSocket].smart
 			reportError(webSocket, new IOException("testException"))
 			sendMessage("testMessage")
 
@@ -107,7 +107,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a send after an unexpected close as failed and advance" in new scope {
-			val webSocket = mockAs[WebSocket]("ws").smart
+			val webSocket = mock[WebSocket].smart
 			closeUnexpectedly(webSocket)
 			sendMessage("testMessage")
 
@@ -117,7 +117,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a successful close and advance" in new scope {
-			val webSocket = mockAs[WebSocket]("ws").smart
+			val webSocket = mock[WebSocket].smart
 			openSuccessfully(webSocket)
 			close()
 
@@ -127,7 +127,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a close after an error as failed and advance" in new scope {
-			val webSocket = mockAs[WebSocket]("ws").smart
+			val webSocket = mock[WebSocket].smart
 			reportError(webSocket, new IOException("testException"))
 			close()
 
@@ -137,7 +137,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 		}
 
 		"record a close after an unexpected close as failed and advance" in new scope {
-			val webSocket = mockAs[WebSocket]("ws").smart
+			val webSocket = mock[WebSocket].smart
 			closeUnexpectedly(webSocket)
 			close()
 
@@ -148,11 +148,11 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 	}
 
 	private trait scope extends Scope with MocksCreation {
-		val requestLogger = mockAs[RequestLogger]("rq")
+		val requestLogger = mock[RequestLogger]
 		var next: TestActorRef[DummyAction] = _
 
 		def webSocketClient(open: (WebSocketListener) => Unit) = {
-			mockAs[WebSocketClient]("wsc").open(any[URI], any[WebSocketListener]) answers { (params, _) =>
+			mock[WebSocketClient].open(any[URI], any[WebSocketListener]) answers { (params, _) =>
 				open(params.asInstanceOf[Array[_]](1).asInstanceOf[WebSocketListener])
 			}
 		}
