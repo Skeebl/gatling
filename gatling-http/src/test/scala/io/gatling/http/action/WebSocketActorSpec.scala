@@ -54,6 +54,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 	}
 
 	"A WebSocketActor" should {
+
 		"record a successful open and advance" in new scope {
 			open(webSocketClient(_.onOpen(mock[WebSocket].smart)))
 
@@ -93,6 +94,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 
 			there was one(webSocket).sendTextMessage(isEq("testMessage"))
 			there was one(requestLogger).logRequest(any[Session], anyString, isEq(OK), anyLong, anyLong, isEq(null))
+
 			next.underlyingActor.session.map(_.isFailed) mustEqual Some(false)
 		}
 
@@ -164,20 +166,24 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 				.build(next)
 
 			action ! new Session("test", 0)
+			Thread.sleep(100)
 		}
 
 		def openSuccessfully(webSocket: WebSocket) {
 			open(webSocketClient(_.onOpen(webSocket)))
+			Thread.sleep(100)
 			reset(requestLogger)
 		}
 
 		def reportError(webSocket: WebSocket, t: Throwable) {
 			open(webSocketClient { s => s.onOpen(webSocket); s.onError(t) })
+			Thread.sleep(100)
 			reset(requestLogger)
 		}
 
 		def closeUnexpectedly(webSocket: WebSocket) {
 			open(webSocketClient { s => s.onOpen(webSocket); s.onClose(webSocket) })
+			Thread.sleep(100)
 			reset(requestLogger)
 		}
 
@@ -189,6 +195,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 				.build(next)
 
 			action ! session
+			Thread.sleep(100)
 		}
 
 		def close() {
@@ -199,6 +206,7 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 				.build(next)
 
 			action ! session
+			Thread.sleep(100)
 		}
 	}
 

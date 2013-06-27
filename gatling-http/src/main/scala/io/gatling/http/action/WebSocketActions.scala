@@ -64,6 +64,7 @@ private[http] class OpenWebSocketAction(
 
 					def onClose(webSocket: WebSocket) {
 						if (opened) {
+							opened = false
 							actor ! OnClose
 						} else {
 							actor ! OnFailedOpen(actionName, "closed", started, nowMillis, next, session)
@@ -150,6 +151,7 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 			next ! session.set(attributeName, (self, webSocket))
 
 		case OnFailedOpen(actionName, message, started, ended, next, session) =>
+			errorMessage = Some(message)
 			logger.warn(s"Websocket '$attributeName' failed to open: $message")
 			requestLogger.logRequest(session, actionName, KO, started, ended, Some(message))
 			next ! session.markAsFailed
@@ -159,9 +161,12 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 			logger.debug(s"Received message on websocket '$attributeName':\n$message")
 
 		case OnClose =>
+			webSocket = None
+			errorMessage = Some(s"Websocket '$attributeName' was unexpectedly closed")
 			logger.warn(s"Websocket '$attributeName' was unexpectedly closed")
 
 		case OnError(t) =>
+			errorMessage = Some(t.getMessage)
 			logger.warn(s"Websocket '$attributeName' gave an error: '${t.getMessage}'")
 
 		case SendMessage(actionName, message, next, session) =>
@@ -186,7 +191,6 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 		if (errorMessage.isDefined) {
 			val now = nowMillis
 			requestLogger.logRequest(session, actionName, KO, now, now, errorMessage)
-			errorMessage = None
 			next ! session.markAsFailed
 			context.stop(self)
 			true
