@@ -51,5 +51,5 @@ class WebSocketBaseBuilder(val actionName: Expression[String]) {
 }
 
 object WebSocketBaseBuilder {
-	def websocket(attributeName: Expression[String]) = new WebSocketBaseBuilder(attributeName)
+	def websocket(actionName: Expression[String]) = new WebSocketBaseBuilder(actionName)
 }
