@@ -141,8 +141,7 @@ private[http] class CloseWebSocketAction(actionName: Expression[String], attribu
 }
 
 private[http] class WebSocketActor(val attributeName: String, requestLogger: RequestLogger) extends BaseActor {
-	var webSocket: Option[WebSocket] = None
-	var errorMessage: Option[String] = None
+	private[this] var webSocket: Option[WebSocket] = None
 
 	def receive = {
 		case OnOpen(actionName, webSocket, started, ended, next, session) =>
@@ -151,7 +150,6 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 			next ! session.set(attributeName, (self, webSocket))
 
 		case OnFailedOpen(actionName, message, started, ended, next, session) =>
-			errorMessage = Some(message)
 			logger.warn(s"Websocket '$attributeName' failed to open: $message")
 			requestLogger.logRequest(session, actionName, KO, started, ended, Some(message))
 			next ! session.markAsFailed
@@ -161,16 +159,13 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 			logger.debug(s"Received message on websocket '$attributeName':\n$message")
 
 		case OnClose =>
-			webSocket = None
-			errorMessage = Some(s"Websocket '$attributeName' was unexpectedly closed")
-			logger.warn(s"Websocket '$attributeName' was unexpectedly closed")
+			setOutOfBandError(s"Websocket '$attributeName' was unexpectedly closed")
 
 		case OnError(t) =>
-			errorMessage = Some(t.getMessage)
-			logger.warn(s"Websocket '$attributeName' gave an error: '${t.getMessage}'")
+			setOutOfBandError(s"Websocket '$attributeName' gave an error: '${t.getMessage}'")
 
 		case SendMessage(actionName, message, next, session) =>
-			if (!handleEarlierError(actionName, next, session)) {
+			if (!handleOutOfBandError(actionName, next, session)) {
 				val started = nowMillis
 				webSocket.foreach(_.sendTextMessage(message))
 				requestLogger.logRequest(session, actionName, OK, started, nowMillis)
@@ -178,7 +173,7 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 			}
 
 		case Close(actionName, next, session) =>
-			if (!handleEarlierError(actionName, next, session)) {
+			if (!handleOutOfBandError(actionName, next, session)) {
 				val started = nowMillis
 				webSocket.foreach(_.close)
 				requestLogger.logRequest(session, actionName, OK, started, nowMillis)
@@ -187,10 +182,18 @@ private[http] class WebSocketActor(val attributeName: String, requestLogger: Req
 			}
 	}
 
-	def handleEarlierError(actionName: String, next: ActorRef, session: Session) = {
-		if (errorMessage.isDefined) {
+	private[this] var outOfBandError: Option[String] = None
+
+	private[this] def setOutOfBandError(message: String) {
+		outOfBandError = Some(message)
+		logger.warn(message)
+	}
+
+	private[this] def handleOutOfBandError(actionName: String, next: ActorRef, session: Session) = {
+		if (outOfBandError.isDefined) {
 			val now = nowMillis
-			requestLogger.logRequest(session, actionName, KO, now, now, errorMessage)
+			requestLogger.logRequest(session, actionName, KO, now, now, outOfBandError)
+			outOfBandError = None
 			next ! session.markAsFailed
 			context.stop(self)
 			true
