@@ -166,24 +166,20 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 				.build(next)
 
 			action ! new Session("test", 0)
-			Thread.sleep(100)
 		}
 
 		def openSuccessfully(webSocket: WebSocket) {
 			open(webSocketClient(_.onOpen(webSocket)))
-			Thread.sleep(100)
 			reset(requestLogger)
 		}
 
 		def reportError(webSocket: WebSocket, t: Throwable) {
 			open(webSocketClient { s => s.onOpen(webSocket); s.onError(t) })
-			Thread.sleep(100)
 			reset(requestLogger)
 		}
 
 		def closeUnexpectedly(webSocket: WebSocket) {
 			open(webSocketClient { s => s.onOpen(webSocket); s.onClose(webSocket) })
-			Thread.sleep(100)
 			reset(requestLogger)
 		}
 
@@ -195,7 +191,6 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 				.build(next)
 
 			action ! session
-			Thread.sleep(100)
 		}
 
 		def close() {
@@ -206,7 +201,6 @@ class WebSocketActorSpec extends Specification with AllExpectations with Mockito
 				.build(next)
 
 			action ! session
-			Thread.sleep(100)
 		}
 	}
 
